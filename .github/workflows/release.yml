@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-elixir@v1
+        with:
+          elixir-version: "1.15"
+          otp-version: "26"
+      - run: mix deps.get
+      - run: mix test
+
+  create_release:
+    name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  precompile_and_upload:
+    name: Precompile and Upload
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [create_release]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Add your desired targets here
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-elixir@v1
+        with:
+          elixir-version: "1.15"
+          otp-version: "26"
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: mix deps.get
+      - run: mix rustler.precompile
+        env:
+          RUSTLER_PRECOMPILATION_TARGET: ${{ matrix.target }}
+      - name: Upload assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: "checksum-${{ matrix.target }}.exs"
+          asset_name: "checksum-${{ matrix.target }}.exs"
+          asset_content_type: "application/octet-stream"
+
+  publish_to_hex:
+    name: Publish to Hex
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [precompile_and_upload]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-elixir@v1
+        with:
+          elixir-version: "1.15"
+          otp-version: "26"
+      - run: mix deps.get
+      - run: mix hex.publish --yes
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}

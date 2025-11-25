@@ -5,27 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2024-11-11
 
 ### Added
-- Initial extraction from Grimoire project
-- Connection support for Neo4j (including Aura with `bolt+s://`)
-- Query execution framework
-- Comprehensive type conversion (primitives, collections, graph types, spatial, temporal)
-- Rust NIF using neo4rs 0.8
-- Tokio runtime for async operations
-- Resource-based connection management
 
-### Known Issues
-- Row API implementation incomplete - query results currently return empty maps
-- This needs to be fixed before 0.1.0 release
+- **Full Row-to-Map Conversion**: Implemented the core feature of converting Neo4j query results into a list of Elixir maps, including support for nodes, relationships, and paths.
+- **Comprehensive Type Support**: Handles conversion for all major Neo4j data types.
+- **Automated Releases**: Set up a GitHub Actions workflow to test, pre-compile binaries for Linux (x86, ARM), macOS (Intel, ARM), and Windows, and publish to Hex.pm automatically on new version tags.
+- **Robust Test Suite**: Added a full integration test suite and fixed all doctests to ensure code quality and stability.
 
-## [0.1.0-dev] - 2024-11-11
+### Notes
 
-### Status
-- Extracted from Grimoire for isolated development
-- Row API issue needs resolution
-- Not yet published to Hex
-
-[Unreleased]: https://github.com/chwarner-solo/neo4j_nif/compare/v0.1.0-dev...HEAD
-[0.1.0-dev]: https://github.com/chwarner-solo/neo4j_nif/releases/tag/v0.1.0-dev
+- This version currently depends on the `main` branch of the `neo4j-labs/neo4rs` repository to include necessary features that have not yet been part of a stable release.
