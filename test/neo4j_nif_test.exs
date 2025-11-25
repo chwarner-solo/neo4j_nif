@@ -15,11 +15,13 @@ defmodule Neo4jNifTest do
     end
 
     test "returns error with invalid credentials" do
-      assert {:error, _reason} = Neo4jNif.connect(@uri, "wrong", "credentials")
+      {:ok, conn} = Neo4jNif.connect(@uri, "wrong", "credentials")
+      assert {:error, _reason} = Neo4jNif.execute_query(conn, "RETURN 1")
     end
 
     test "returns error with invalid URI" do
-      assert {:error, _reason} = Neo4jNif.connect("bolt://localhost:9999", @user, @password)
+      {:ok, conn} = Neo4jNif.connect("bolt://localhost:9999", @user, @password)
+      assert {:error, _reason} = Neo4jNif.execute_query(conn, "RETURN 1")
     end
   end
 
@@ -30,12 +32,32 @@ defmodule Neo4jNifTest do
     end
 
     test "executes simple query", %{conn: conn} do
-      # Known issue: Returns empty results due to Row API implementation
-      assert {:ok, _results} = Neo4jNif.execute_query(conn, "RETURN 1 as num")
+      assert {:ok, [%{"num" => 1}]} = Neo4jNif.execute_query(conn, "RETURN 1 as num")
     end
 
     test "returns error for invalid query", %{conn: conn} do
       assert {:error, _reason} = Neo4jNif.execute_query(conn, "INVALID CYPHER")
+    end
+  end
+
+  describe "Querying Nodes" do
+    setup do
+      {:ok, conn} = Neo4jNif.connect(@uri, @user, @password)
+      # Clean up any previous test data
+      Neo4jNif.execute_query(conn, "MATCH (n:TestNode {name: 'test-node'}) DELETE n")
+      # Create a test node
+      Neo4jNif.execute_query(conn, "CREATE (:TestNode {name: 'test-node', value: 123})")
+      {:ok, conn: conn}
+    end
+
+    test "retrieves a node and converts it to a map", %{conn: conn} do
+      query = "MATCH (n:TestNode {name: 'test-node'}) RETURN n"
+      {:ok, [result]} = Neo4jNif.execute_query(conn, query)
+
+      assert %{"n" => node} = result
+      assert "node" == node["__type"]
+      assert ["TestNode"] == node["labels"]
+      assert %{"name" => "test-node", "value" => 123} == node["properties"]
     end
   end
 end

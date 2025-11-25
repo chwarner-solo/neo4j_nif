@@ -5,15 +5,24 @@ use std::collections::HashMap;
 use crate::atoms;
 
 /// Convert a Neo4j Row to an Elixir-friendly map
-///
-/// NOTE: neo4rs 0.8 Row doesn't expose column names easily
-/// For now, returning debug representation
-/// TODO: Figure out proper neo4rs 0.8 Row API
-pub fn convert_row_to_elixir(_row: &Row) -> Result<HashMap<String, ElixirValue>, String> {
-    let row_map = HashMap::new();
+pub fn convert_row_to_elixir(row: &Row) -> Result<HashMap<String, ElixirValue>, String> {
+    let mut row_map = HashMap::new();
+    let keys = row.keys();
 
-    // Temporary: Return empty map until we figure out Row API
-    // The query results will be empty for now
+    for key in keys {
+        match row.get::<BoltType>(&key.value) {
+            Ok(bolt_value) => {
+                let elixir_value = ElixirValue::from_bolt(bolt_value);
+                row_map.insert(key.to_string(), elixir_value);
+            }
+            Err(e) => {
+                return Err(format!(
+                    "Failed to get value for column '{}': {}",
+                    key, e
+                ));
+            }
+        }
+    }
 
     Ok(row_map)
 }

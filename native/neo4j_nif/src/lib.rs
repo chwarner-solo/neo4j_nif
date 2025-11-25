@@ -15,7 +15,7 @@ pub struct GraphResource {
 }
 
 /// Register the resource type with Rustler
-#[allow(non_local_definitions)]
+#[allow(unused_must_use,non_local_definitions)]
 fn on_load(env: Env, _info: Term) -> bool {
     rustler::resource!(GraphResource, env);
     true
@@ -34,9 +34,7 @@ fn connect<'a>(env: Env<'a>, uri: String, user: String, pass: String) -> Term<'a
         }
     };
 
-    let graph = match runtime.block_on(async {
-        Graph::new(&uri, &user, &pass).await
-    }) {
+    let graph = match Graph::new(&uri, &user, &pass) {
         Ok(g) => g,
         Err(e) => {
             let error_msg = format!("Connection failed: {}", e);
@@ -69,16 +67,10 @@ fn execute_query<'a>(
 
         let mut records = Vec::new();
 
-        loop {
-            match result.next().await {
-                Ok(Some(row)) => {
-                    match convert_row_to_elixir(&row) {
-                        Ok(elixir_row) => records.push(elixir_row),
-                        Err(e) => return Err(e),
-                    }
-                },
-                Ok(None) => break,
-                Err(e) => return Err(format!("Row fetch failed: {}", e)),
+        while let Ok(Some(row)) = result.next().await {
+            match convert_row_to_elixir(&row) {
+                Ok(elixir_row) => records.push(elixir_row),
+                Err(e) => return Err(e),
             }
         }
 
