@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Grant write permission for repository contents
+      releases: write # Grant write permission for releases
     steps:
       - uses: actions/checkout@v4
       - name: Create Release
