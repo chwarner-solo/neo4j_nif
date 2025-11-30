@@ -34,20 +34,16 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     permissions:
-      contents: write # This is sufficient for creating a release and uploading assets
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
-
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
   precompile_and_upload:
     name: Precompile and Upload
     if: startsWith(github.ref, 'refs/tags/v')
