@@ -74,6 +74,7 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - run: mix deps.get
+      - run: mix deps.compile
       - run: mix rustler.precompile
         env:
           RUSTLER_PRECOMPILATION_TARGET: ${{ matrix.target }}
