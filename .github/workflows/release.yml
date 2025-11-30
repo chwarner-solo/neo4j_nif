@@ -21,7 +21,7 @@ jobs:
           NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
     steps:
       - uses: actions/checkout@v4
-      - uses: erlef/setup-elixir@v2
+      - uses: erlef/setup-elixir@v1
         with:
           elixir-version: "1.15"
           otp-version: "26"
@@ -34,15 +34,17 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grant write permission for repository contents
+      contents: write # This is sufficient for creating a release and uploading assets
     steps:
       - uses: actions/checkout@v4
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
           draft: false
           prerelease: false
 
@@ -53,7 +55,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # Add your desired targets here
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -63,12 +64,12 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: windows-latest
+          - os: windows-2022 # Using a more stable runner version
             target: x86_64-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@v4
-      - uses: erlef/setup-elixir@v2
+      - uses: erlef/setup-elixir@v1
         with:
           elixir-version: "1.15"
           otp-version: "26"
@@ -81,9 +82,14 @@ jobs:
         env:
           RUSTLER_PRECOMPILATION_TARGET: ${{ matrix.target }}
       - name: Upload assets
-        uses: softprops/action-gh-release@v2
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: "checksum-${{ matrix.target }}.exs"
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: "checksum-${{ matrix.target }}.exs"
+          asset_name: "checksum-${{ matrix.target }}.exs"
+          asset_content_type: "application/octet-stream"
 
   publish_to_hex:
     name: Publish to Hex
@@ -92,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: erlef/setup-elixir@v2
+      - uses: erlef/setup-elixir@v1
         with:
           elixir-version: "1.15"
           otp-version: "26"
