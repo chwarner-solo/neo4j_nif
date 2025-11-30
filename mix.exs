@@ -22,14 +22,14 @@ defmodule Neo4jNif.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :rustler]
     ]
   end
 
   defp deps do
     [
       {:jason, "~> 1.2"},
-      {:rustler, "~> 0.37.0", runtime: false},
+      {:rustler, "~> 0.37.0"},
       {:rustler_precompiled, "~> 0.8"},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
