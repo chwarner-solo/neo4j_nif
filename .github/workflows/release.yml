@@ -28,70 +28,60 @@ jobs:
       - run: mix deps.get
       - run: mix test
 
-  create_release:
-    name: Create Release
+  build_and_release_nifs:
+    name: Build NIF for ${{ matrix.target }}
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [test]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Create Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create ${{ github.ref_name }} \
-            --title "${{ github.ref_name }}" \
-            --generate-notes
-  precompile_and_upload:
-    name: Precompile and Upload
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [create_release]
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            use-cross: false
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            use-cross: true
           - os: macos-latest
             target: x86_64-apple-darwin
+            use-cross: false
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: windows-2022 # Using a more stable runner version
+            use-cross: false
+          - os: windows-2022
             target: x86_64-pc-windows-msvc
-
+            use-cross: false
     steps:
       - uses: actions/checkout@v4
-      - uses: erlef/setup-elixir@v1
-        with:
-          elixir-version: "1.15"
-          otp-version: "26"
+      - name: Get version from tag
+        shell: bash
+        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - run: mix deps.get
-      - run: mix deps.compile
-      - run: mix rustler.precompile
-        env:
-          RUSTLER_PRECOMPILATION_TARGET: ${{ matrix.target }}
-      - name: Upload assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build NIF
+        id: build_nif
+        uses: philss/rustler-precompiled-action@v1.0.1
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: "checksum-${{ matrix.target }}.exs"
-          asset_name: "checksum-${{ matrix.target }}.exs"
-          asset_content_type: "application/octet-stream"
+          project-name: neo4j_nif
+          project-version: ${{ env.APP_VERSION }}
+          target: ${{ matrix.target }}
+          nif-version: "2.16" # For OTP 26
+          use-cross: ${{ matrix.use-cross }}
+          project-dir: "native/neo4j_nif"
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ steps.build_nif.outputs.file-path }}
+            ${{ steps.build_nif.outputs.checksum-file-path }}
 
   publish_to_hex:
     name: Publish to Hex
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [precompile_and_upload]
+    needs: [build_and_release_nifs]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

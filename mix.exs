@@ -16,7 +16,14 @@ defmodule Neo4jNif.MixProject do
       docs: docs(),
       name: "Neo4j NIF",
       source_url: @source_url,
-      homepage_url: @source_url
+      homepage_url: @source_url,
+      compilers: Mix.compilers() ++ [:rustler_precompiled],
+      rustler_precompiled: [
+        app: :neo4j_nif,
+        crate: "neo4j_nif",
+        base_url: "#{@source_url}/releases/download/v#{@version}",
+        version: @version
+      ]
     ]
   end
 
