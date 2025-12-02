@@ -28,9 +28,11 @@ defmodule Neo4jNif do
   and roadmap.
   """
 
-  use Rustler,
+  use RustlerPrecompiled,
     otp_app: :neo4j_nif,
-    crate: "neo4j_nif"
+    crate: "neo4j_nif",
+    base_url: "https://github.com/chwarner-solo/neo4j_nif/releases/download/v0.1.0",
+    version: "0.1.0"
 
   @doc """
   Connect to a Neo4j database.

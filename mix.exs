@@ -17,7 +17,6 @@ defmodule Neo4jNif.MixProject do
       name: "Neo4j NIF",
       source_url: @source_url,
       homepage_url: @source_url,
-      compilers: Mix.compilers() ++ [:rustler_precompiled],
       rustler_precompiled: [
         app: :neo4j_nif,
         crate: "neo4j_nif",
@@ -36,7 +35,7 @@ defmodule Neo4jNif.MixProject do
   defp deps do
     [
       {:jason, "~> 1.2"},
-      {:rustler, "~> 0.37.0"},
+      {:rustler, "~> 0.37.0", optional: true},
       {:rustler_precompiled, "~> 0.8"},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
